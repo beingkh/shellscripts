@@ -18,7 +18,6 @@ sudo yum install -y kubelet kubeadm kubectl --setopt=disable_excludes=kubernetes
 sudo systemctl start kubelet.service
 sudo systemctl enable kubelet.service
 
-# Create cluster
 sudo kubeadm init 
 
 mkdir -p $HOME/.kube
@@ -30,3 +29,7 @@ kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.3
 
 # /etc/hosts - add host ips
 # vim ~/.bashrc -- alias kubectl='kubectl --kubeconfig=/etc/kubernetes/admin.conf'
+
+echo "alias kubectl='kubectl --kubeconfig=/etc/kubernetes/admin.conf'" >> ~/.bashrc
+
+source ~/.bashrc
