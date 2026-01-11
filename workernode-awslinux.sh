@@ -1,3 +1,6 @@
+#!/bin/bash
+hostnamectl set-hostname workernode
+
 sudo swapoff -a
 sudo yum install docker -y
 sudo systemctl enable --now docker.service

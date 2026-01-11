@@ -1,3 +1,5 @@
+#!/bin/bash
+hostnamectl set-hostname masternode
 sudo swapoff -a
 sudo yum install docker -y
 sudo systemctl enable --now docker.service
@@ -24,12 +26,9 @@ mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-# Install Calico Network Plugin
-kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/calico.yaml -O
-
-# /etc/hosts - add host ips
-# vim ~/.bashrc -- alias kubectl='kubectl --kubeconfig=/etc/kubernetes/admin.conf'
 
 echo "alias kubectl='kubectl --kubeconfig=/etc/kubernetes/admin.conf'" >> ~/.bashrc
-
 source ~/.bashrc
+
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/calico.yaml
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.54"
