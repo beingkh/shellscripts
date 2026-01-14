@@ -2,7 +2,6 @@
 set -e
 dnf update -y
 sudo -i
-hostnamectl set-hostname master-node
 
 swapoff -a
 sed -i '/ swap / s/^/#/' /etc/fstab

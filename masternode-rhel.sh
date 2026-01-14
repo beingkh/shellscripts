@@ -2,7 +2,6 @@
 set -e
 dnf update -y
 sudo -i
-hostnamectl set-hostname master-node
 
 swapoff -a
 sed -i '/ swap / s/^/#/' /etc/fstab
@@ -54,9 +53,12 @@ mkdir -p $HOME/.kube
 cp /etc/kubernetes/admin.conf $HOME/.kube/config
 chown $(id -u):$(id -g) $HOME/.kube/config
 
-echo "alias kubectl='kubectl --kubeconfig=/etc/kubernetes/admin.conf'" >> ~/.bashrc
-source ~/.bashrc
+
 
 sudo dnf install git -y
 
 kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/calico.yaml
+
+
+echo "alias kubectl='kubectl --kubeconfig=/etc/kubernetes/admin.conf'" >> ~/.bashrc
+source ~/.bashrc
