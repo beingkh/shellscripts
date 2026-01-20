@@ -1,46 +1,51 @@
-    #!/bin/bash
-    sudo set -e
+#!/bin/bash
 
-    sudo dnf update -y
+# 1. Disable Swap
+sudo swapoff -a
+sudo sed -i '/ swap / s/^/#/' /etc/fstab
 
-    sudo swapoff -a
-    sudo sed -i '/ swap / s/^/#/' /etc/fstab
+# 2. Set SELinux to permissive
+sudo setenforce 0 || true
+sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-    setenforce 0 || true
-    sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+# 3. Load Kernel Modules (Note: EOF must not be indented)
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
 
-    cat <<EOF >/etc/modules-load.d/k8s.conf
-    overlay
-    br_netfilter
-    EOF
+sudo modprobe overlay
+sudo modprobe br_netfilter
 
-    modprobe overlay
-    modprobe br_netfilter
+# 4. Networking Requirements
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables=1
+net.bridge.bridge-nf-call-ip6tables=1
+net.ipv4.ip_forward=1
+EOF
 
-    cat <<EOF >/etc/sysctl.d/k8s.conf
-    net.bridge.bridge-nf-call-iptables=1
-    net.bridge.bridge-nf-call-ip6tables=1
-    net.ipv4.ip_forward=1
-    EOF
+sudo sysctl --system
 
-    sysctl --system
+# 5. Disable Firewall
+sudo systemctl disable --now firewalld || true
 
-    systemctl disable --now firewalld || true
+# 6. Install Containerd
+sudo dnf install -y containerd.io
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+sudo systemctl enable --now containerd
 
-    sudo dnf install -y containerd.io
-    mkdir -p /etc/containerd
-    containerd config default > /etc/containerd/config.toml
-    sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-    systemctl enable --now containerd
+# 7. Add Kubernetes Repository (Using v1.29 as per your script)
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/repodata/repomd.xml.key
+EOF
 
-    cat <<EOF >/etc/yum.repos.d/kubernetes.repo
-    [kubernetes]
-    name=Kubernetes
-    baseurl=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/
-    enabled=1
-    gpgcheck=1
-    gpgkey=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/repodata/repomd.xml.key
-    EOF
-
-    dnf install -y kubelet kubeadm kubectl
-    systemctl enable kubelet
+# 8. Install K8s Components
+sudo dnf install -y kubelet kubeadm kubectl
+sudo systemctl enable --now kubelet
