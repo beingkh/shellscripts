@@ -8,7 +8,7 @@ sudo sed -i '/ swap / s/^/#/' /etc/fstab
 sudo setenforce 0 || true
 sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-# 3. Load Kernel Modules (Note: EOF must not be indented)
+# 3. Load Kernel Modules
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 overlay
 br_netfilter
@@ -29,14 +29,19 @@ sudo sysctl --system
 # 5. Disable Firewall
 sudo systemctl disable --now firewalld || true
 
+# 5.5 Add Docker Repo (REQUIRED for containerd.io)
+sudo dnf install -y dnf-utils
+sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
 # 6. Install Containerd
 sudo dnf install -y containerd.io
 sudo mkdir -p /etc/containerd
+# Fixed: added sudo tee to avoid permission denied
 containerd config default | sudo tee /etc/containerd/config.toml
 sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
 sudo systemctl enable --now containerd
 
-# 7. Add Kubernetes Repository (Using v1.29 as per your script)
+# 7. Add Kubernetes Repository
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
